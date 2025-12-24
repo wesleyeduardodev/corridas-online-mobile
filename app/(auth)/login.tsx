@@ -210,8 +210,6 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.title}>Entrar</Text>
-
           <View style={styles.inputContainer}>
             <Text style={styles.label}>E-mail</Text>
             <TextInput
