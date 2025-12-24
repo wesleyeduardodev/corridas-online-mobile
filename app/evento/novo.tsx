@@ -15,12 +15,7 @@ import {
 import { router } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import { eventosService, CriarEventoRequest } from '@/services/eventos';
-
-const ESTADOS = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
-  'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
-  'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
-];
+import LocalidadeSelector from '@/components/LocalidadeSelector';
 
 export default function NovoEventoScreen() {
   const [nome, setNome] = useState('');
@@ -28,8 +23,12 @@ export default function NovoEventoScreen() {
   const [data, setData] = useState('');
   const [horario, setHorario] = useState('');
   const [local, setLocal] = useState('');
-  const [cidade, setCidade] = useState('');
-  const [estado, setEstado] = useState('');
+  const [localidade, setLocalidade] = useState<{
+    cidade: string;
+    cidadeIbge: number;
+    estado: string;
+    estadoIbge: number;
+  } | null>(null);
   const [inscricoesAbertas, setInscricoesAbertas] = useState(true);
   const [limiteInscricoes, setLimiteInscricoes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,7 +54,7 @@ export default function NovoEventoScreen() {
   }
 
   async function handleCriar() {
-    if (!nome.trim() || !data || !local.trim() || !cidade.trim() || !estado) {
+    if (!nome.trim() || !data || !local.trim() || !localidade) {
       Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
       return;
     }
@@ -66,8 +65,10 @@ export default function NovoEventoScreen() {
       data: parseDataToISO(data),
       horario: horario || undefined,
       local: local.trim(),
-      cidade: cidade.trim(),
-      estado,
+      cidade: localidade.cidade,
+      cidadeIbge: localidade.cidadeIbge,
+      estado: localidade.estado,
+      estadoIbge: localidade.estadoIbge,
       inscricoesAbertas,
       limiteInscricoes: limiteInscricoes ? parseInt(limiteInscricoes) : undefined,
     };
@@ -169,31 +170,12 @@ export default function NovoEventoScreen() {
             />
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, { flex: 2 }]}>
-              <Text style={styles.label}>Cidade *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex: São Paulo"
-                placeholderTextColor={Colors.textLight}
-                value={cidade}
-                onChangeText={setCidade}
-              />
-            </View>
-
-            <View style={[styles.inputContainer, { flex: 1, marginLeft: 12 }]}>
-              <Text style={styles.label}>Estado *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="UF"
-                placeholderTextColor={Colors.textLight}
-                value={estado}
-                onChangeText={(text) => setEstado(text.toUpperCase())}
-                maxLength={2}
-                autoCapitalize="characters"
-              />
-            </View>
-          </View>
+          <LocalidadeSelector
+            label="Cidade *"
+            value={localidade || undefined}
+            onChange={setLocalidade}
+            required
+          />
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Limite de inscrições</Text>

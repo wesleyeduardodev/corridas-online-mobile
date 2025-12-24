@@ -29,6 +29,10 @@ export interface RegistroAtletaRequest {
   telefone?: string;
   dataNascimento: string;
   sexo: string;
+  cidade?: string;
+  cidadeIbge?: number;
+  estado?: string;
+  estadoIbge?: number;
 }
 
 export const authService = {

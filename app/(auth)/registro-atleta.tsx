@@ -14,6 +14,7 @@ import {
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/colors';
+import LocalidadeSelector from '@/components/LocalidadeSelector';
 
 export default function RegistroAtletaScreen() {
   const { registrarAtleta } = useAuth();
@@ -25,6 +26,12 @@ export default function RegistroAtletaScreen() {
   const [telefone, setTelefone] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [sexo, setSexo] = useState<'M' | 'F' | ''>('');
+  const [localidade, setLocalidade] = useState<{
+    cidade: string;
+    cidadeIbge: number;
+    estado: string;
+    estadoIbge: number;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   function formatCpf(value: string) {
@@ -94,6 +101,10 @@ export default function RegistroAtletaScreen() {
         telefone: telefone ? telefone.replace(/\D/g, '') : undefined,
         dataNascimento: parseDataToISO(dataNascimento),
         sexo,
+        cidade: localidade?.cidade,
+        cidadeIbge: localidade?.cidadeIbge,
+        estado: localidade?.estado,
+        estadoIbge: localidade?.estadoIbge,
       });
       router.replace('/(tabs)');
     } catch (error: any) {
@@ -223,6 +234,12 @@ export default function RegistroAtletaScreen() {
               maxLength={15}
             />
           </View>
+
+          <LocalidadeSelector
+            label="Cidade"
+            value={localidade || undefined}
+            onChange={setLocalidade}
+          />
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Senha *</Text>

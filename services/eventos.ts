@@ -9,7 +9,9 @@ export interface Evento {
   horario?: string;
   local: string;
   cidade: string;
+  cidadeIbge?: number;
   estado: string;
+  estadoIbge?: number;
   inscricoesAbertas: boolean;
   limiteInscricoes?: number;
   valorInscricao?: number;
@@ -22,7 +24,9 @@ export interface CriarEventoRequest {
   horario?: string;
   local: string;
   cidade: string;
+  cidadeIbge: number;
   estado: string;
+  estadoIbge: number;
   inscricoesAbertas?: boolean;
   limiteInscricoes?: number;
 }

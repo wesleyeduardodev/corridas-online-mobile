@@ -1,4 +1,4 @@
-export const API_URL = 'https://6b56f95e895f.ngrok-free.app';
+export const API_URL = 'https://0cf75cb56bdc.ngrok-free.app';
 
 export const ENDPOINTS = {
   AUTH: {
@@ -16,5 +16,9 @@ export const ENDPOINTS = {
     ATLETA: '/api/atleta/inscricoes',
     INSCREVER: (eventoId: number) => `/api/atleta/eventos/${eventoId}/inscricoes`,
     ORGANIZADOR: (eventoId: number) => `/api/eventos/${eventoId}/inscricoes`,
+  },
+  LOCALIDADES: {
+    ESTADOS: '/api/public/localidades/estados',
+    CIDADES: (uf: string) => `/api/public/localidades/estados/${uf}/cidades`,
   },
 };
