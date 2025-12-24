@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/colors';
 
 export default function Index() {
-  const { signed, loading } = useAuth();
+  const { signed, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -15,7 +15,11 @@ export default function Index() {
   }
 
   if (signed) {
-    return <Redirect href="/(tabs)" />;
+    // Redirecionar baseado no role do usuario
+    if (user?.role === 'ORGANIZADOR' || user?.role === 'ADMIN') {
+      return <Redirect href="/(organizador)" />;
+    }
+    return <Redirect href="/(atleta)" />;
   }
 
   return <Redirect href="/(auth)/login" />;

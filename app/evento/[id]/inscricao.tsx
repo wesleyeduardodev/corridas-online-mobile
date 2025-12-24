@@ -98,7 +98,7 @@ export default function InscricaoEventoScreen() {
       Alert.alert(
         'Sucesso!',
         'Sua inscrição foi realizada com sucesso. Acompanhe o status na aba "Inscrições".',
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)/inscricoes') }]
+        [{ text: 'OK', onPress: () => router.replace('/(atleta)/inscricoes') }]
       );
     } catch (error: any) {
       const message = error.response?.data?.message || 'Erro ao realizar inscrição';

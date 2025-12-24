@@ -44,14 +44,6 @@ function RunnerLogo() {
           </View>
         </View>
       </View>
-      {/* Linha de chegada decorativa */}
-      <View style={logoStyles.finishLine}>
-        <View style={logoStyles.finishSquare} />
-        <View style={[logoStyles.finishSquare, logoStyles.finishSquareAlt]} />
-        <View style={logoStyles.finishSquare} />
-        <View style={[logoStyles.finishSquare, logoStyles.finishSquareAlt]} />
-        <View style={logoStyles.finishSquare} />
-      </View>
     </View>
   );
 }
@@ -154,20 +146,6 @@ const logoStyles = StyleSheet.create({
     marginBottom: 2,
     opacity: 0.7,
   },
-  finishLine: {
-    flexDirection: 'row',
-    marginTop: 12,
-  },
-  finishSquare: {
-    width: 8,
-    height: 8,
-    backgroundColor: Colors.text,
-  },
-  finishSquareAlt: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.text,
-  },
 });
 
 export default function LoginScreen() {
@@ -185,8 +163,9 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      await login({ email: email.trim(), senha });
-      router.replace('/(tabs)');
+      const response = await login({ email: email.trim(), senha });
+      // Redirecionar baseado no role - o index.tsx vai fazer isso automaticamente
+      router.replace('/');
     } catch (error: any) {
       const message = error.response?.data?.message || 'Erro ao fazer login';
       Alert.alert('Erro', message);

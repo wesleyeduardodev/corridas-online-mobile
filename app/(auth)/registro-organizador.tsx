@@ -77,7 +77,7 @@ export default function RegistroOrganizadorScreen() {
         cpfCnpj: cpfCnpj.replace(/\D/g, ''),
         telefone: telefone ? telefone.replace(/\D/g, '') : undefined,
       });
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (error: any) {
       const message = error.response?.data?.message || 'Erro ao criar conta';
       Alert.alert('Erro', message);

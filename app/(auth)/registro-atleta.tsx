@@ -106,7 +106,7 @@ export default function RegistroAtletaScreen() {
         estado: localidade?.estado,
         estadoIbge: localidade?.estadoIbge,
       });
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (error: any) {
       const message = error.response?.data?.message || 'Erro ao criar conta';
       Alert.alert('Erro', message);

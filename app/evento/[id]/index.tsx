@@ -70,7 +70,7 @@ export default function DetalhesEventoScreen() {
             try {
               await eventosService.excluir(Number(id));
               Alert.alert('Sucesso', 'Evento excluído com sucesso');
-              router.replace('/(tabs)/eventos');
+              router.replace('/(organizador)/eventos');
             } catch (error: any) {
               Alert.alert('Erro', 'Não foi possível excluir o evento');
             }

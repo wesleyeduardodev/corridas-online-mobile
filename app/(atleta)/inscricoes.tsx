@@ -11,12 +11,10 @@ import {
   Modal,
 } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/colors';
 import { inscricoesService, InscricaoAtleta } from '@/services/inscricoes';
 
-export default function InscricoesScreen() {
-  const { user } = useAuth();
+export default function InscricoesAtletaScreen() {
   const [inscricoes, setInscricoes] = useState<InscricaoAtleta[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,24 +22,17 @@ export default function InscricoesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [cancelando, setCancelando] = useState(false);
 
-  const isOrganizador = user?.role === 'ORGANIZADOR' || user?.role === 'ADMIN';
-
   const loadInscricoes = useCallback(async () => {
-    if (isOrganizador) {
-      setLoading(false);
-      return;
-    }
-
     try {
       const data = await inscricoesService.minhasInscricoes();
       setInscricoes(data);
     } catch (error: any) {
-      console.log('Erro ao carregar inscrições:', error);
+      console.log('Erro ao carregar inscricoes:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isOrganizador]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -103,10 +94,10 @@ export default function InscricoesScreen() {
     if (!selectedInscricao) return;
 
     Alert.alert(
-      'Cancelar Inscrição',
-      'Tem certeza que deseja cancelar esta inscrição? Esta ação não pode ser desfeita.',
+      'Cancelar Inscricao',
+      'Tem certeza que deseja cancelar esta inscricao? Esta acao nao pode ser desfeita.',
       [
-        { text: 'Não', style: 'cancel' },
+        { text: 'Nao', style: 'cancel' },
         {
           text: 'Sim, Cancelar',
           style: 'destructive',
@@ -114,11 +105,11 @@ export default function InscricoesScreen() {
             setCancelando(true);
             try {
               await inscricoesService.cancelar(selectedInscricao.id);
-              Alert.alert('Sucesso', 'Inscrição cancelada com sucesso');
+              Alert.alert('Sucesso', 'Inscricao cancelada com sucesso');
               setModalVisible(false);
               loadInscricoes();
             } catch (error: any) {
-              const message = error.response?.data?.message || 'Erro ao cancelar inscrição';
+              const message = error.response?.data?.message || 'Erro ao cancelar inscricao';
               Alert.alert('Erro', message);
             } finally {
               setCancelando(false);
@@ -160,18 +151,18 @@ export default function InscricoesScreen() {
 
         <View style={styles.inscricaoBody}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📅</Text>
-            <Text style={styles.infoText}>{formatDate(item.eventoData)}</Text>
+            <Text style={styles.infoLabel}>Data</Text>
+            <Text style={styles.infoValue}>{formatDate(item.eventoData)}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📍</Text>
-            <Text style={styles.infoText}>{item.eventoCidade}/{item.eventoEstado}</Text>
+            <Text style={styles.infoLabel}>Local</Text>
+            <Text style={styles.infoValue}>{item.eventoCidade}/{item.eventoEstado}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🏃</Text>
-            <Text style={styles.infoText}>
+            <Text style={styles.infoLabel}>Categoria</Text>
+            <Text style={styles.infoValue}>
               {item.categoriaNome} ({item.categoriaDistanciaKm} km)
             </Text>
           </View>
@@ -179,7 +170,7 @@ export default function InscricoesScreen() {
 
         {item.numeroInscricao && item.status === 'PAGO' && (
           <View style={styles.numeroContainer}>
-            <Text style={styles.numeroLabel}>Número de Peito</Text>
+            <Text style={styles.numeroLabel}>Numero de Peito</Text>
             <Text style={styles.numero}>#{item.numeroInscricao}</Text>
           </View>
         )}
@@ -202,35 +193,14 @@ export default function InscricoesScreen() {
     );
   }
 
-  if (isOrganizador) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Inscrições</Text>
-        </View>
-        <View style={styles.organizadorInfo}>
-          <Text style={styles.organizadorText}>
-            Para ver as inscrições dos seus eventos, acesse cada evento individualmente
-            na aba "Meus Eventos".
-          </Text>
-          <TouchableOpacity
-            style={styles.organizadorButton}
-            onPress={() => router.push('/(tabs)/eventos')}
-          >
-            <Text style={styles.organizadorButtonText}>Ir para Meus Eventos</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
   const inscricoesAtivas = inscricoes.filter(i => i.status !== 'CANCELADO');
   const inscricoesCanceladas = inscricoes.filter(i => i.status === 'CANCELADO');
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Minhas Inscrições</Text>
+        <Text style={styles.title}>Minhas Inscricoes</Text>
+        <Text style={styles.subtitle}>{inscricoesAtivas.length} inscricoes ativas</Text>
       </View>
 
       <FlatList
@@ -250,13 +220,13 @@ export default function InscricoesScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🏃</Text>
-            <Text style={styles.emptyTitle}>Nenhuma inscrição</Text>
+            <Text style={styles.emptyTitle}>Nenhuma inscricao</Text>
             <Text style={styles.emptyText}>
-              Você ainda não está inscrito em nenhum evento
+              Voce ainda nao esta inscrito em nenhum evento
             </Text>
             <TouchableOpacity
               style={styles.emptyButton}
-              onPress={() => router.push('/(tabs)/eventos')}
+              onPress={() => router.push('/(atleta)/eventos')}
             >
               <Text style={styles.emptyButtonText}>Explorar Eventos</Text>
             </TouchableOpacity>
@@ -273,9 +243,9 @@ export default function InscricoesScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Detalhes da Inscrição</Text>
+              <Text style={styles.modalTitle}>Detalhes da Inscricao</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Text style={styles.modalClose}>✕</Text>
+                <Text style={styles.modalClose}>X</Text>
               </TouchableOpacity>
             </View>
 
@@ -329,13 +299,13 @@ export default function InscricoesScreen() {
 
                   {selectedInscricao.numeroInscricao && (
                     <View style={styles.modalInfoRow}>
-                      <Text style={styles.modalInfoLabel}>Número de Peito</Text>
+                      <Text style={styles.modalInfoLabel}>Numero de Peito</Text>
                       <Text style={styles.modalNumero}>#{selectedInscricao.numeroInscricao}</Text>
                     </View>
                   )}
 
                   <View style={styles.modalInfoRow}>
-                    <Text style={styles.modalInfoLabel}>Data da Inscrição</Text>
+                    <Text style={styles.modalInfoLabel}>Data da Inscricao</Text>
                     <Text style={styles.modalInfoValue}>{formatDate(selectedInscricao.dataInscricao)}</Text>
                   </View>
                 </View>
@@ -343,7 +313,7 @@ export default function InscricoesScreen() {
                 {selectedInscricao.status === 'PENDENTE' && (
                   <View style={styles.modalWarning}>
                     <Text style={styles.modalWarningText}>
-                      Sua inscrição está aguardando confirmação de pagamento pelo organizador.
+                      Sua inscricao esta aguardando confirmacao de pagamento pelo organizador.
                     </Text>
                   </View>
                 )}
@@ -357,7 +327,7 @@ export default function InscricoesScreen() {
                     {cancelando ? (
                       <ActivityIndicator color={Colors.error} size="small" />
                     ) : (
-                      <Text style={styles.cancelButtonText}>Cancelar Inscrição</Text>
+                      <Text style={styles.cancelButtonText}>Cancelar Inscricao</Text>
                     )}
                   </TouchableOpacity>
                 )}
@@ -399,6 +369,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: Colors.text,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: 4,
   },
   list: {
     padding: 16,
@@ -458,17 +433,17 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 6,
   },
-  infoIcon: {
-    fontSize: 14,
-    marginRight: 8,
-    width: 20,
-  },
-  infoText: {
+  infoLabel: {
     fontSize: 14,
     color: Colors.textSecondary,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: '500',
   },
   numeroContainer: {
     backgroundColor: Colors.primary + '10',
@@ -534,30 +509,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   emptyButtonText: {
-    color: Colors.white,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  organizadorInfo: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  organizadorText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 20,
-  },
-  organizadorButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  organizadorButtonText: {
     color: Colors.white,
     fontSize: 14,
     fontWeight: '600',

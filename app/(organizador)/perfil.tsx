@@ -10,7 +10,7 @@ import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/colors';
 
-export default function PerfilScreen() {
+export default function PerfilOrganizadorScreen() {
   const { user, logout } = useAuth();
 
   async function handleLogout() {
@@ -25,19 +25,6 @@ export default function PerfilScreen() {
         },
       },
     ]);
-  }
-
-  function getRoleLabel(role: string) {
-    switch (role) {
-      case 'ORGANIZADOR':
-        return 'Organizador';
-      case 'ATLETA':
-        return 'Atleta';
-      case 'ADMIN':
-        return 'Administrador';
-      default:
-        return role;
-    }
   }
 
   return (
@@ -56,7 +43,7 @@ export default function PerfilScreen() {
           <Text style={styles.userName}>{user?.nome}</Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{getRoleLabel(user?.role || '')}</Text>
+            <Text style={styles.roleText}>Organizador</Text>
           </View>
         </View>
 
@@ -81,10 +68,10 @@ export default function PerfilScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Configurações</Text>
+          <Text style={styles.sectionTitle}>Configuracoes</Text>
 
           <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Notificações</Text>
+            <Text style={styles.menuItemText}>Notificacoes</Text>
             <Text style={styles.menuItemArrow}>›</Text>
           </TouchableOpacity>
 
@@ -98,7 +85,7 @@ export default function PerfilScreen() {
           <Text style={styles.logoutButtonText}>Sair da Conta</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>Versão 1.0.0</Text>
+        <Text style={styles.version}>Versao 1.0.0</Text>
       </ScrollView>
     </View>
   );

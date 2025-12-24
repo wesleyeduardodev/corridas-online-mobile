@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Alert,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/colors';
 import api from '@/services/api';
 import { ENDPOINTS } from '@/constants/api';
@@ -25,13 +24,10 @@ interface Evento {
   inscricoesAbertas: boolean;
 }
 
-export default function EventosScreen() {
-  const { user } = useAuth();
+export default function EventosOrganizadorScreen() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const isOrganizador = user?.role === 'ORGANIZADOR' || user?.role === 'ADMIN';
 
   useFocusEffect(
     useCallback(() => {
@@ -41,13 +37,10 @@ export default function EventosScreen() {
 
   async function loadEventos() {
     try {
-      const endpoint = isOrganizador
-        ? ENDPOINTS.EVENTOS.BASE
-        : ENDPOINTS.EVENTOS.PUBLICOS;
-      const response = await api.get(endpoint);
+      const response = await api.get(ENDPOINTS.EVENTOS.BASE);
       setEventos(response.data);
     } catch (error: any) {
-      Alert.alert('Erro', 'Não foi possível carregar os eventos');
+      Alert.alert('Erro', 'Nao foi possivel carregar os eventos');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -63,36 +56,45 @@ export default function EventosScreen() {
     });
   }
 
-  function handleEventoPress(evento: Evento) {
-    if (isOrganizador) {
-      router.push(`/evento/${evento.id}`);
-    } else {
-      router.push(`/evento/${evento.id}/inscricao`);
-    }
-  }
-
   function renderEvento({ item }: { item: Evento }) {
+    const isPast = new Date(item.data) < new Date();
+
     return (
-      <TouchableOpacity style={styles.eventoCard} onPress={() => handleEventoPress(item)}>
+      <TouchableOpacity
+        style={[styles.eventoCard, isPast && styles.eventoCardPast]}
+        onPress={() => router.push(`/evento/${item.id}`)}
+      >
         <View style={styles.eventoHeader}>
-          <Text style={styles.eventoNome}>{item.nome}</Text>
+          <Text style={[styles.eventoNome, isPast && styles.textoPassado]}>{item.nome}</Text>
           <View
             style={[
               styles.statusBadge,
               item.inscricoesAbertas ? styles.statusAberto : styles.statusFechado,
             ]}
           >
-            <Text style={styles.statusText}>
+            <Text
+              style={[
+                styles.statusText,
+                { color: item.inscricoesAbertas ? Colors.success : Colors.error },
+              ]}
+            >
               {item.inscricoesAbertas ? 'Aberto' : 'Fechado'}
             </Text>
           </View>
         </View>
         <View style={styles.eventoInfo}>
-          <Text style={styles.eventoData}>{formatDate(item.data)}</Text>
+          <Text style={[styles.eventoData, isPast && styles.textoPassado]}>
+            {formatDate(item.data)}
+          </Text>
           <Text style={styles.eventoLocal}>
             {item.local} - {item.cidade}/{item.estado}
           </Text>
         </View>
+        {isPast && (
+          <View style={styles.pastBadge}>
+            <Text style={styles.pastBadgeText}>Evento encerrado</Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   }
@@ -105,21 +107,26 @@ export default function EventosScreen() {
     );
   }
 
+  // Separar eventos futuros e passados
+  const hoje = new Date();
+  const eventosFuturos = eventos
+    .filter(e => new Date(e.data) >= hoje)
+    .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+  const eventosPassados = eventos
+    .filter(e => new Date(e.data) < hoje)
+    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>
-          {isOrganizador ? 'Meus Eventos' : 'Eventos Disponíveis'}
-        </Text>
-        {isOrganizador && (
-          <TouchableOpacity style={styles.addButton} onPress={() => router.push('/evento/novo')}>
-            <Text style={styles.addButtonText}>+ Novo</Text>
-          </TouchableOpacity>
-        )}
+        <Text style={styles.title}>Meus Eventos</Text>
+        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/evento/novo')}>
+          <Text style={styles.addButtonText}>+ Novo</Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
-        data={eventos}
+        data={[...eventosFuturos, ...eventosPassados]}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderEvento}
         contentContainerStyle={styles.list}
@@ -134,11 +141,17 @@ export default function EventosScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>📅</Text>
+            <Text style={styles.emptyTitle}>Nenhum evento</Text>
             <Text style={styles.emptyText}>
-              {isOrganizador
-                ? 'Você ainda não criou nenhum evento'
-                : 'Nenhum evento disponível no momento'}
+              Voce ainda nao criou nenhum evento
             </Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => router.push('/evento/novo')}
+            >
+              <Text style={styles.emptyButtonText}>Criar Evento</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -197,6 +210,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  eventoCardPast: {
+    opacity: 0.7,
+    backgroundColor: Colors.background,
+  },
   eventoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -209,6 +226,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     flex: 1,
     marginRight: 8,
+  },
+  textoPassado: {
+    color: Colors.textSecondary,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -237,13 +257,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
   },
+  pastBadge: {
+    backgroundColor: Colors.textLight + '30',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  pastBadgeText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
   emptyContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
     padding: 40,
     alignItems: 'center',
   },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 8,
+  },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
+    marginBottom: 20,
+  },
+  emptyButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  emptyButtonText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

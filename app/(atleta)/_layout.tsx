@@ -20,14 +20,16 @@ function TabBarIcon({ name, focused }: { name: string; focused: boolean }) {
   );
 }
 
-export default function TabsLayout() {
+export default function AtletaLayout() {
   const { user, signed } = useAuth();
 
   if (!signed) {
     return <Redirect href="/(auth)/login" />;
   }
 
-  const isOrganizador = user?.role === 'ORGANIZADOR' || user?.role === 'ADMIN';
+  if (user?.role === 'ORGANIZADOR' || user?.role === 'ADMIN') {
+    return <Redirect href="/(organizador)" />;
+  }
 
   return (
     <Tabs
@@ -42,21 +44,21 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Início',
+          title: 'Inicio',
           tabBarIcon: ({ focused }) => <TabBarIcon name="home" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="eventos"
         options={{
-          title: isOrganizador ? 'Meus Eventos' : 'Eventos',
+          title: 'Eventos',
           tabBarIcon: ({ focused }) => <TabBarIcon name="eventos" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="inscricoes"
         options={{
-          title: 'Inscrições',
+          title: 'Inscricoes',
           tabBarIcon: ({ focused }) => <TabBarIcon name="inscricoes" focused={focused} />,
         }}
       />
