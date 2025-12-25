@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/colors';
-import { eventosService, Evento, Categoria } from '@/services/eventos';
+import { eventosService, Evento, Categoria, StatusEvento } from '@/services/eventos';
 
 export default function DetalhesEventoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,6 +19,9 @@ export default function DetalhesEventoScreen() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const isCancelado = evento?.status === 'CANCELADO';
 
   const loadData = useCallback(async () => {
     try {
@@ -64,7 +67,7 @@ export default function DetalhesEventoScreen() {
       'Excluir Evento',
       'Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.',
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Voltar', style: 'cancel' },
         {
           text: 'Excluir',
           style: 'destructive',
@@ -74,7 +77,59 @@ export default function DetalhesEventoScreen() {
               Alert.alert('Sucesso', 'Evento excluído com sucesso');
               router.replace('/(organizador)/eventos');
             } catch (error: any) {
-              Alert.alert('Erro', 'Não foi possível excluir o evento');
+              const message = error.response?.data?.message || 'Não foi possível excluir o evento';
+              Alert.alert('Não foi possível excluir', message);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleCancelar() {
+    Alert.alert(
+      'Cancelar Evento',
+      'Tem certeza que deseja cancelar este evento? Todas as inscrições ativas serão canceladas.',
+      [
+        { text: 'Voltar', style: 'cancel' },
+        {
+          text: 'Cancelar Evento',
+          style: 'destructive',
+          onPress: async () => {
+            setActionLoading(true);
+            try {
+              const eventoAtualizado = await eventosService.cancelar(Number(id));
+              setEvento(eventoAtualizado);
+              Alert.alert('Sucesso', 'Evento cancelado com sucesso');
+            } catch (error: any) {
+              Alert.alert('Erro', error.response?.data?.message || 'Não foi possível cancelar o evento');
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleReativar() {
+    Alert.alert(
+      'Reativar Evento',
+      'Deseja reativar este evento? As inscrições que foram canceladas junto com o evento serão restauradas.',
+      [
+        { text: 'Voltar', style: 'cancel' },
+        {
+          text: 'Reativar',
+          onPress: async () => {
+            setActionLoading(true);
+            try {
+              const eventoAtualizado = await eventosService.reativar(Number(id));
+              setEvento(eventoAtualizado);
+              Alert.alert('Sucesso', 'Evento reativado com sucesso');
+            } catch (error: any) {
+              Alert.alert('Erro', error.response?.data?.message || 'Não foi possível reativar o evento');
+            } finally {
+              setActionLoading(false);
             }
           },
         },
@@ -115,17 +170,34 @@ export default function DetalhesEventoScreen() {
           }} />
         }
       >
-        <View style={styles.card}>
+        {isCancelado && (
+          <View style={styles.canceladoBanner}>
+            <Text style={styles.canceladoBannerText}>Este evento foi cancelado</Text>
+          </View>
+        )}
+
+        <View style={[styles.card, isCancelado && styles.cardCancelado]}>
           <View style={styles.titleRow}>
-            <Text style={styles.eventoNome}>{evento.nome}</Text>
-            <View style={[
-              styles.statusBadge,
-              evento.inscricoesAbertas ? styles.statusAberto : styles.statusFechado
-            ]}>
-              <Text style={styles.statusText}>
-                {evento.inscricoesAbertas ? 'Aberto' : 'Fechado'}
-              </Text>
-            </View>
+            <Text style={[styles.eventoNome, isCancelado && styles.textoCancelado]}>
+              {evento.nome}
+            </Text>
+            {isCancelado ? (
+              <View style={styles.statusCancelado}>
+                <Text style={styles.statusCanceladoText}>Cancelado</Text>
+              </View>
+            ) : (
+              <View style={[
+                styles.statusBadge,
+                evento.inscricoesAbertas ? styles.statusAberto : styles.statusFechado
+              ]}>
+                <Text style={[
+                  styles.statusText,
+                  { color: evento.inscricoesAbertas ? Colors.success : Colors.error }
+                ]}>
+                  {evento.inscricoesAbertas ? 'Aberto' : 'Fechado'}
+                </Text>
+              </View>
+            )}
           </View>
 
           {evento.descricao && (
@@ -211,9 +283,41 @@ export default function DetalhesEventoScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.deleteButton} onPress={handleExcluir}>
-          <Text style={styles.deleteButtonText}>Excluir Evento</Text>
-        </TouchableOpacity>
+        <View style={styles.actionsSection}>
+          {isCancelado ? (
+            <TouchableOpacity
+              style={styles.reativarButton}
+              onPress={handleReativar}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.reativarButtonText}>Reativar Evento</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.cancelarButton}
+              onPress={handleCancelar}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.cancelarButtonText}>Cancelar Evento</Text>
+              )}
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleExcluir}
+            disabled={actionLoading}
+          >
+            <Text style={styles.deleteButtonText}>Excluir Evento</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -411,17 +515,73 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: Colors.primary,
   },
+  actionsSection: {
+    marginTop: 8,
+    marginBottom: 40,
+    gap: 12,
+  },
+  cancelarButton: {
+    backgroundColor: Colors.warning,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  cancelarButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  reativarButton: {
+    backgroundColor: Colors.success,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  reativarButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   deleteButton: {
     backgroundColor: Colors.error,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 40,
   },
   deleteButtonText: {
     color: Colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  canceladoBanner: {
+    backgroundColor: Colors.error,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  canceladoBannerText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cardCancelado: {
+    opacity: 0.8,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.error,
+  },
+  textoCancelado: {
+    color: Colors.textSecondary,
+  },
+  statusCancelado: {
+    backgroundColor: Colors.error + '20',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusCanceladoText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.error,
   },
 });

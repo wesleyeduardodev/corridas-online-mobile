@@ -1,6 +1,8 @@
 import api from './api';
 import { ENDPOINTS } from '@/constants/api';
 
+export type StatusEvento = 'ATIVO' | 'CANCELADO';
+
 export interface Evento {
   id: number;
   nome: string;
@@ -16,6 +18,7 @@ export interface Evento {
   limiteInscricoes?: number;
   trajetoUrl?: string;
   valorInscricao?: number;
+  status: StatusEvento;
 }
 
 export interface CriarEventoRequest {
@@ -61,32 +64,16 @@ export interface Inscricao {
   atletaCpf: string;
   categoriaNome: string;
   categoriaId: number;
-  status: 'PENDENTE' | 'PAGO' | 'CANCELADO';
+  status: 'PENDENTE' | 'PAGO' | 'CANCELADO' | 'CANCELADO_EVENTO';
   dataInscricao: string;
   numeroInscricao?: number;
 }
 
-export interface TrajetoPonto {
-  id?: number;
-  ordem: number;
-  latitude: number;
-  longitude: number;
-  descricao?: string;
-  tipoPonto: 'PARTIDA' | 'INTERMEDIARIO' | 'CHEGADA';
-}
-
-export interface TrajetoPontoRequest {
-  ordem: number;
-  latitude: number;
-  longitude: number;
-  descricao?: string;
-  tipoPonto: 'PARTIDA' | 'INTERMEDIARIO' | 'CHEGADA';
-}
-
 export const eventosService = {
-  // Eventos do organizador
-  listar: async (): Promise<Evento[]> => {
-    const response = await api.get(ENDPOINTS.EVENTOS.BASE);
+  listar: async (includeCancelados = false): Promise<Evento[]> => {
+    const response = await api.get(ENDPOINTS.EVENTOS.BASE, {
+      params: { includeCancelados },
+    });
     return response.data;
   },
 
@@ -109,7 +96,16 @@ export const eventosService = {
     await api.delete(`${ENDPOINTS.EVENTOS.BASE}/${id}`);
   },
 
-  // Categorias
+  cancelar: async (id: number): Promise<Evento> => {
+    const response = await api.patch(`${ENDPOINTS.EVENTOS.BASE}/${id}/cancelar`);
+    return response.data;
+  },
+
+  reativar: async (id: number): Promise<Evento> => {
+    const response = await api.patch(`${ENDPOINTS.EVENTOS.BASE}/${id}/reativar`);
+    return response.data;
+  },
+
   listarCategorias: async (eventoId: number): Promise<Categoria[]> => {
     const response = await api.get(ENDPOINTS.CATEGORIAS(eventoId));
     return response.data;
@@ -129,7 +125,6 @@ export const eventosService = {
     await api.delete(`${ENDPOINTS.CATEGORIAS(eventoId)}/${categoriaId}`);
   },
 
-  // Inscrições do evento (organizador)
   listarInscricoes: async (eventoId: number): Promise<Inscricao[]> => {
     const response = await api.get(ENDPOINTS.INSCRICOES.ORGANIZADOR(eventoId));
     return response.data;
@@ -137,25 +132,5 @@ export const eventosService = {
 
   atualizarStatusInscricao: async (eventoId: number, inscricaoId: number, status: string): Promise<void> => {
     await api.patch(`${ENDPOINTS.INSCRICOES.ORGANIZADOR(eventoId)}/${inscricaoId}`, { status });
-  },
-
-  // Trajeto
-  listarTrajeto: async (eventoId: number): Promise<TrajetoPonto[]> => {
-    const response = await api.get(ENDPOINTS.TRAJETO.BASE(eventoId));
-    return response.data;
-  },
-
-  salvarTrajeto: async (eventoId: number, pontos: TrajetoPontoRequest[]): Promise<TrajetoPonto[]> => {
-    const response = await api.post(ENDPOINTS.TRAJETO.BASE(eventoId), pontos);
-    return response.data;
-  },
-
-  limparTrajeto: async (eventoId: number): Promise<void> => {
-    await api.delete(ENDPOINTS.TRAJETO.BASE(eventoId));
-  },
-
-  calcularDistancia: async (eventoId: number): Promise<number> => {
-    const response = await api.get(ENDPOINTS.TRAJETO.DISTANCIA(eventoId));
-    return response.data.distanciaKm;
   },
 };

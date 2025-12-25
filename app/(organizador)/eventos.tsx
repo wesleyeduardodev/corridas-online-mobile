@@ -8,11 +8,11 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Switch,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/colors';
-import api from '@/services/api';
-import { ENDPOINTS } from '@/constants/api';
+import { eventosService, StatusEvento } from '@/services/eventos';
 
 interface Evento {
   id: number;
@@ -22,23 +22,25 @@ interface Evento {
   cidade: string;
   estado: string;
   inscricoesAbertas: boolean;
+  status: StatusEvento;
 }
 
 export default function EventosOrganizadorScreen() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [mostrarCancelados, setMostrarCancelados] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       loadEventos();
-    }, [])
+    }, [mostrarCancelados])
   );
 
   async function loadEventos() {
     try {
-      const response = await api.get(ENDPOINTS.EVENTOS.BASE);
-      setEventos(response.data);
+      const data = await eventosService.listar(mostrarCancelados);
+      setEventos(data);
     } catch (error: any) {
       Alert.alert('Erro', 'Nao foi possivel carregar os eventos');
     } finally {
@@ -58,39 +60,52 @@ export default function EventosOrganizadorScreen() {
 
   function renderEvento({ item }: { item: Evento }) {
     const isPast = new Date(item.data) < new Date();
+    const isCancelado = item.status === 'CANCELADO';
 
     return (
       <TouchableOpacity
-        style={[styles.eventoCard, isPast && styles.eventoCardPast]}
+        style={[
+          styles.eventoCard,
+          isPast && styles.eventoCardPast,
+          isCancelado && styles.eventoCardCancelado,
+        ]}
         onPress={() => router.push(`/evento/${item.id}`)}
       >
         <View style={styles.eventoHeader}>
-          <Text style={[styles.eventoNome, isPast && styles.textoPassado]}>{item.nome}</Text>
-          <View
-            style={[
-              styles.statusBadge,
-              item.inscricoesAbertas ? styles.statusAberto : styles.statusFechado,
-            ]}
-          >
-            <Text
+          <Text style={[styles.eventoNome, (isPast || isCancelado) && styles.textoPassado]}>
+            {item.nome}
+          </Text>
+          {isCancelado ? (
+            <View style={styles.statusCancelado}>
+              <Text style={styles.statusCanceladoText}>Cancelado</Text>
+            </View>
+          ) : (
+            <View
               style={[
-                styles.statusText,
-                { color: item.inscricoesAbertas ? Colors.success : Colors.error },
+                styles.statusBadge,
+                item.inscricoesAbertas ? styles.statusAberto : styles.statusFechado,
               ]}
             >
-              {item.inscricoesAbertas ? 'Aberto' : 'Fechado'}
-            </Text>
-          </View>
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: item.inscricoesAbertas ? Colors.success : Colors.error },
+                ]}
+              >
+                {item.inscricoesAbertas ? 'Aberto' : 'Fechado'}
+              </Text>
+            </View>
+          )}
         </View>
         <View style={styles.eventoInfo}>
-          <Text style={[styles.eventoData, isPast && styles.textoPassado]}>
+          <Text style={[styles.eventoData, (isPast || isCancelado) && styles.textoPassado]}>
             {formatDate(item.data)}
           </Text>
           <Text style={styles.eventoLocal}>
             {item.local} - {item.cidade}/{item.estado}
           </Text>
         </View>
-        {isPast && (
+        {isPast && !isCancelado && (
           <View style={styles.pastBadge}>
             <Text style={styles.pastBadgeText}>Evento encerrado</Text>
           </View>
@@ -123,6 +138,16 @@ export default function EventosOrganizadorScreen() {
         <TouchableOpacity style={styles.addButton} onPress={() => router.push('/evento/novo')}>
           <Text style={styles.addButtonText}>+ Novo</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.filterRow}>
+        <Text style={styles.filterLabel}>Mostrar cancelados</Text>
+        <Switch
+          value={mostrarCancelados}
+          onValueChange={setMostrarCancelados}
+          trackColor={{ false: Colors.border, true: Colors.primary }}
+          thumbColor={Colors.white}
+        />
       </View>
 
       <FlatList
@@ -196,6 +221,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  filterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  filterLabel: {
+    fontSize: 14,
+    color: Colors.text,
+  },
   list: {
     padding: 16,
   },
@@ -213,6 +252,23 @@ const styles = StyleSheet.create({
   eventoCardPast: {
     opacity: 0.7,
     backgroundColor: Colors.background,
+  },
+  eventoCardCancelado: {
+    opacity: 0.6,
+    backgroundColor: '#fff5f5',
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.error,
+  },
+  statusCancelado: {
+    backgroundColor: Colors.error + '20',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusCanceladoText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.error,
   },
   eventoHeader: {
     flexDirection: 'row',

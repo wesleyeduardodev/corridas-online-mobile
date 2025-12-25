@@ -12,11 +12,6 @@ export const ENDPOINTS = {
   },
   CATEGORIAS: (eventoId: number) => `/api/eventos/${eventoId}/categorias`,
   CATEGORIAS_PUBLICAS: (eventoId: number) => `/api/public/eventos/${eventoId}/categorias`,
-  TRAJETO: {
-    BASE: (eventoId: number) => `/api/eventos/${eventoId}/trajeto`,
-    DISTANCIA: (eventoId: number) => `/api/eventos/${eventoId}/trajeto/distancia`,
-    PUBLICO: (eventoId: number) => `/api/public/eventos/${eventoId}/trajeto`,
-  },
   INSCRICOES: {
     ATLETA: '/api/atleta/inscricoes',
     INSCREVER: (eventoId: number) => `/api/atleta/eventos/${eventoId}/inscricoes`,
