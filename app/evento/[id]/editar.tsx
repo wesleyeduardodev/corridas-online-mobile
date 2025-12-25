@@ -278,9 +278,10 @@ export default function EditarEventoScreen() {
           </View>
 
           <LocalidadeSelector
+            label="Cidade"
             value={localidade}
             onChange={setLocalidade}
-            label="Localizacao *"
+            required
           />
 
           <View style={styles.inputContainer}>

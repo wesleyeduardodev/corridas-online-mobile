@@ -227,7 +227,7 @@ export default function NovoEventoScreen() {
           </View>
 
           <LocalidadeSelector
-            label="Cidade *"
+            label="Cidade"
             value={localidade || undefined}
             onChange={setLocalidade}
             required
