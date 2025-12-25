@@ -14,6 +14,7 @@ export interface Evento {
   estadoIbge?: number;
   inscricoesAbertas: boolean;
   limiteInscricoes?: number;
+  trajetoUrl?: string;
   valorInscricao?: number;
 }
 
@@ -29,6 +30,7 @@ export interface CriarEventoRequest {
   estadoIbge: number;
   inscricoesAbertas?: boolean;
   limiteInscricoes?: number;
+  trajetoUrl?: string;
 }
 
 export interface Categoria {
@@ -62,6 +64,23 @@ export interface Inscricao {
   status: 'PENDENTE' | 'PAGO' | 'CANCELADO';
   dataInscricao: string;
   numeroInscricao?: number;
+}
+
+export interface TrajetoPonto {
+  id?: number;
+  ordem: number;
+  latitude: number;
+  longitude: number;
+  descricao?: string;
+  tipoPonto: 'PARTIDA' | 'INTERMEDIARIO' | 'CHEGADA';
+}
+
+export interface TrajetoPontoRequest {
+  ordem: number;
+  latitude: number;
+  longitude: number;
+  descricao?: string;
+  tipoPonto: 'PARTIDA' | 'INTERMEDIARIO' | 'CHEGADA';
 }
 
 export const eventosService = {
@@ -118,5 +137,25 @@ export const eventosService = {
 
   atualizarStatusInscricao: async (eventoId: number, inscricaoId: number, status: string): Promise<void> => {
     await api.patch(`${ENDPOINTS.INSCRICOES.ORGANIZADOR(eventoId)}/${inscricaoId}`, { status });
+  },
+
+  // Trajeto
+  listarTrajeto: async (eventoId: number): Promise<TrajetoPonto[]> => {
+    const response = await api.get(ENDPOINTS.TRAJETO.BASE(eventoId));
+    return response.data;
+  },
+
+  salvarTrajeto: async (eventoId: number, pontos: TrajetoPontoRequest[]): Promise<TrajetoPonto[]> => {
+    const response = await api.post(ENDPOINTS.TRAJETO.BASE(eventoId), pontos);
+    return response.data;
+  },
+
+  limparTrajeto: async (eventoId: number): Promise<void> => {
+    await api.delete(ENDPOINTS.TRAJETO.BASE(eventoId));
+  },
+
+  calcularDistancia: async (eventoId: number): Promise<number> => {
+    const response = await api.get(ENDPOINTS.TRAJETO.DISTANCIA(eventoId));
+    return response.data.distanciaKm;
   },
 };

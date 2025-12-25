@@ -207,7 +207,7 @@ export default function EditarPerfilScreen() {
             {saving ? (
               <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.buttonText}>Salvar Alterações</Text>
+              <Text style={styles.buttonText}>Salvar</Text>
             )}
           </TouchableOpacity>
         </View>

@@ -11,10 +11,14 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Modal,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import { eventosService, CriarEventoRequest } from '@/services/eventos';
+import LocalidadeSelector from '@/components/LocalidadeSelector';
+import BannerPlaceholder from '@/components/BannerPlaceholder';
 
 export default function EditarEventoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,12 +27,18 @@ export default function EditarEventoScreen() {
   const [data, setData] = useState('');
   const [horario, setHorario] = useState('');
   const [local, setLocal] = useState('');
-  const [cidade, setCidade] = useState('');
-  const [estado, setEstado] = useState('');
+  const [localidade, setLocalidade] = useState<{
+    cidade: string;
+    cidadeIbge: number;
+    estado: string;
+    estadoIbge: number;
+  } | null>(null);
   const [inscricoesAbertas, setInscricoesAbertas] = useState(true);
   const [limiteInscricoes, setLimiteInscricoes] = useState('');
+  const [trajetoUrl, setTrajetoUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showTrajetoHelp, setShowTrajetoHelp] = useState(false);
 
   useEffect(() => {
     loadEvento();
@@ -40,14 +50,23 @@ export default function EditarEventoScreen() {
       setNome(evento.nome);
       setDescricao(evento.descricao || '');
       setData(formatDateFromISO(evento.data));
-      setHorario(evento.horario || '');
+      setHorario(evento.horario ? evento.horario.slice(0, 5) : '');
       setLocal(evento.local);
-      setCidade(evento.cidade);
-      setEstado(evento.estado);
+
+      if (evento.cidadeIbge && evento.estadoIbge) {
+        setLocalidade({
+          cidade: evento.cidade,
+          cidadeIbge: evento.cidadeIbge,
+          estado: evento.estado,
+          estadoIbge: evento.estadoIbge,
+        });
+      }
+
       setInscricoesAbertas(evento.inscricoesAbertas);
       setLimiteInscricoes(evento.limiteInscricoes?.toString() || '');
+      setTrajetoUrl(evento.trajetoUrl || '');
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível carregar o evento');
+      Alert.alert('Erro', 'Nao foi possivel carregar o evento');
       router.back();
     } finally {
       setLoading(false);
@@ -70,7 +89,7 @@ export default function EditarEventoScreen() {
   }
 
   function formatHorario(value: string) {
-    const numbers = value.replace(/\D/g, '');
+    const numbers = value.replace(/\D/g, '').slice(0, 4);
     return numbers.replace(/(\d{2})(\d)/, '$1:$2');
   }
 
@@ -82,9 +101,57 @@ export default function EditarEventoScreen() {
     return dataStr;
   }
 
+  function validarData(dataStr: string): boolean {
+    if (!dataStr || dataStr.length !== 10) return false;
+
+    const parts = dataStr.split('/');
+    if (parts.length !== 3) return false;
+
+    const dia = parseInt(parts[0], 10);
+    const mes = parseInt(parts[1], 10);
+    const ano = parseInt(parts[2], 10);
+
+    if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return false;
+    if (ano < 2024 || ano > 2100) return false;
+    if (mes < 1 || mes > 12) return false;
+    if (dia < 1 || dia > 31) return false;
+
+    const dataObj = new Date(ano, mes - 1, dia);
+    return dataObj.getDate() === dia &&
+           dataObj.getMonth() === mes - 1 &&
+           dataObj.getFullYear() === ano;
+  }
+
+  function validarHorario(horarioStr: string): boolean {
+    if (!horarioStr) return true;
+    if (horarioStr.length !== 5) return false;
+
+    const parts = horarioStr.split(':');
+    if (parts.length !== 2) return false;
+
+    const hora = parseInt(parts[0], 10);
+    const minuto = parseInt(parts[1], 10);
+
+    if (isNaN(hora) || isNaN(minuto)) return false;
+    if (hora < 0 || hora > 23) return false;
+    if (minuto < 0 || minuto > 59) return false;
+
+    return true;
+  }
+
   async function handleSalvar() {
-    if (!nome.trim() || !data || !local.trim() || !cidade.trim() || !estado) {
-      Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
+    if (!nome.trim() || !data || !local.trim() || !localidade) {
+      Alert.alert('Erro', 'Preencha todos os campos obrigatorios');
+      return;
+    }
+
+    if (!validarData(data)) {
+      Alert.alert('Erro', 'Data invalida. Use o formato DD/MM/AAAA com uma data valida');
+      return;
+    }
+
+    if (!validarHorario(horario)) {
+      Alert.alert('Erro', 'Horario invalido. Use o formato HH:MM (ex: 08:30)');
       return;
     }
 
@@ -94,10 +161,13 @@ export default function EditarEventoScreen() {
       data: parseDataToISO(data),
       horario: horario || undefined,
       local: local.trim(),
-      cidade: cidade.trim(),
-      estado,
+      cidade: localidade.cidade,
+      cidadeIbge: localidade.cidadeIbge,
+      estado: localidade.estado,
+      estadoIbge: localidade.estadoIbge,
       inscricoesAbertas,
       limiteInscricoes: limiteInscricoes ? parseInt(limiteInscricoes) : undefined,
+      trajetoUrl: trajetoUrl.trim() || undefined,
     };
 
     setSaving(true);
@@ -141,11 +211,13 @@ export default function EditarEventoScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.form}>
+          <BannerPlaceholder disabled />
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Nome do evento *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Ex: Corrida de Verão 2025"
+              placeholder="Ex: Corrida de Verao 2025"
               placeholderTextColor={Colors.textLight}
               value={nome}
               onChangeText={setNome}
@@ -153,10 +225,10 @@ export default function EditarEventoScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Descrição</Text>
+            <Text style={styles.label}>Descricao</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Descrição do evento..."
+              placeholder="Descricao do evento..."
               placeholderTextColor={Colors.textLight}
               value={descricao}
               onChangeText={setDescricao}
@@ -181,7 +253,7 @@ export default function EditarEventoScreen() {
             </View>
 
             <View style={[styles.inputContainer, { flex: 1, marginLeft: 12 }]}>
-              <Text style={styles.label}>Horário</Text>
+              <Text style={styles.label}>Horario</Text>
               <TextInput
                 style={styles.input}
                 placeholder="HH:MM"
@@ -205,34 +277,102 @@ export default function EditarEventoScreen() {
             />
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, { flex: 2 }]}>
-              <Text style={styles.label}>Cidade *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex: São Paulo"
-                placeholderTextColor={Colors.textLight}
-                value={cidade}
-                onChangeText={setCidade}
-              />
-            </View>
-
-            <View style={[styles.inputContainer, { flex: 1, marginLeft: 12 }]}>
-              <Text style={styles.label}>Estado *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="UF"
-                placeholderTextColor={Colors.textLight}
-                value={estado}
-                onChangeText={(text) => setEstado(text.toUpperCase())}
-                maxLength={2}
-                autoCapitalize="characters"
-              />
-            </View>
-          </View>
+          <LocalidadeSelector
+            value={localidade}
+            onChange={setLocalidade}
+            label="Localizacao *"
+          />
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Limite de inscrições</Text>
+            <View style={styles.labelRow}>
+              <Text style={[styles.label, { marginBottom: 0 }]}>Link do trajeto (Google Maps)</Text>
+              <TouchableOpacity
+                style={styles.helpIcon}
+                onPress={() => setShowTrajetoHelp(true)}
+              >
+                <Text style={styles.helpIconText}>?</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Cole o link do trajeto aqui"
+              placeholderTextColor={Colors.textLight}
+              value={trajetoUrl}
+              onChangeText={setTrajetoUrl}
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+            <Text style={styles.hint}>
+              Crie o trajeto em maps.google.com/d e cole o link de compartilhamento
+            </Text>
+          </View>
+
+          <Modal
+            visible={showTrajetoHelp}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowTrajetoHelp(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Como criar o link do trajeto</Text>
+
+                <View style={styles.stepContainer}>
+                  <Text style={styles.stepNumber}>1</Text>
+                  <View style={styles.stepTextContainer}>
+                    <Text style={styles.stepText}>
+                      Acesse o Google My Maps em
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL('https://www.google.com/maps/d/')}
+                    >
+                      <Text style={[styles.stepText, styles.stepLink]}>
+                        google.com/maps/d
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.stepContainer}>
+                  <Text style={styles.stepNumber}>2</Text>
+                  <Text style={[styles.stepText, styles.stepTextFlex]}>
+                    Clique em "Criar um novo mapa"
+                  </Text>
+                </View>
+
+                <View style={styles.stepContainer}>
+                  <Text style={styles.stepNumber}>3</Text>
+                  <Text style={[styles.stepText, styles.stepTextFlex]}>
+                    Na barra de ferramentas, clique em "Adicionar trajeto de carro/bike/a pe"
+                  </Text>
+                </View>
+
+                <View style={styles.stepContainer}>
+                  <Text style={styles.stepNumber}>4</Text>
+                  <Text style={[styles.stepText, styles.stepTextFlex]}>
+                    Desenhe o trajeto clicando nos pontos do percurso no mapa
+                  </Text>
+                </View>
+
+                <View style={styles.stepContainer}>
+                  <Text style={styles.stepNumber}>5</Text>
+                  <Text style={[styles.stepText, styles.stepTextFlex]}>
+                    Clique em "Compartilhar" e copie o link gerado
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={() => setShowTrajetoHelp(false)}
+                >
+                  <Text style={styles.modalButtonText}>Entendi</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Limite de inscricoes</Text>
             <TextInput
               style={styles.input}
               placeholder="Deixe vazio para ilimitado"
@@ -245,7 +385,7 @@ export default function EditarEventoScreen() {
 
           <View style={styles.switchContainer}>
             <View>
-              <Text style={styles.label}>Inscrições abertas</Text>
+              <Text style={styles.label}>Inscricoes abertas</Text>
               <Text style={styles.switchDescription}>
                 Permitir que atletas se inscrevam
               </Text>
@@ -266,7 +406,7 @@ export default function EditarEventoScreen() {
             {saving ? (
               <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.buttonText}>Salvar Alterações</Text>
+              <Text style={styles.buttonText}>Salvar</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -346,6 +486,96 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     paddingTop: 14,
+  },
+  hint: {
+    fontSize: 12,
+    color: Colors.textLight,
+    marginTop: 6,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  helpIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  helpIconText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  stepContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginRight: 12,
+  },
+  stepTextContainer: {
+    flex: 1,
+  },
+  stepText: {
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  stepTextFlex: {
+    flex: 1,
+  },
+  stepLink: {
+    color: Colors.primary,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+  },
+  modalButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    padding: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   row: {
     flexDirection: 'row',
