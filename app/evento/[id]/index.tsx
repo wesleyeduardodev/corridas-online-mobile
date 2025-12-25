@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import { eventosService, Evento, Categoria } from '@/services/eventos';
 
@@ -37,9 +37,11 @@ export default function DetalhesEventoScreen() {
     }
   }, [id]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   function formatDate(dateString: string) {
     const date = new Date(dateString);
@@ -138,7 +140,7 @@ export default function DetalhesEventoScreen() {
             {evento.horario && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Horário</Text>
-                <Text style={styles.infoValue}>{evento.horario}</Text>
+                <Text style={styles.infoValue}>{evento.horario.slice(0, 5)}</Text>
               </View>
             )}
             <View style={styles.infoRow}>
