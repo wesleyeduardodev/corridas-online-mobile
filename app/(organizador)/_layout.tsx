@@ -1,23 +1,8 @@
-import { Tabs, Redirect } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { Stack, Redirect } from 'expo-router';
+import { View, StyleSheet } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { Colors } from '@/constants/colors';
-
-function TabBarIcon({ name, focused }: { name: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    home: 'H',
-    eventos: 'E',
-    perfil: 'P',
-  };
-
-  return (
-    <View style={[styles.iconContainer, focused && styles.iconContainerFocused]}>
-      <Text style={[styles.iconText, focused && styles.iconTextFocused]}>
-        {icons[name] || '?'}
-      </Text>
-    </View>
-  );
-}
+import { DrawerProvider } from '@/contexts/DrawerContext';
+import { Drawer } from '@/components/Drawer';
 
 export default function OrganizadorLayout() {
   const { user, signed } = useAuth();
@@ -31,70 +16,26 @@ export default function OrganizadorLayout() {
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textSecondary,
-        tabBarLabelStyle: styles.tabBarLabel,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Inicio',
-          tabBarIcon: ({ focused }) => <TabBarIcon name="home" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="eventos"
-        options={{
-          title: 'Meus Eventos',
-          tabBarIcon: ({ focused }) => <TabBarIcon name="eventos" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="perfil"
-        options={{
-          title: 'Perfil',
-          tabBarIcon: ({ focused }) => <TabBarIcon name="perfil" focused={focused} />,
-        }}
-      />
-    </Tabs>
+    <DrawerProvider>
+      <View style={styles.container}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'fade',
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="eventos" />
+          <Stack.Screen name="perfil" />
+        </Stack>
+        <Drawer />
+      </View>
+    </DrawerProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.white,
-    borderTopColor: Colors.border,
-    borderTopWidth: 1,
-    height: 60,
-    paddingBottom: 8,
-    paddingTop: 8,
-  },
-  tabBarLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  iconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-  },
-  iconContainerFocused: {
-    backgroundColor: Colors.primary,
-  },
-  iconText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.textSecondary,
-  },
-  iconTextFocused: {
-    color: Colors.white,
+  container: {
+    flex: 1,
   },
 });

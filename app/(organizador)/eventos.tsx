@@ -11,6 +11,8 @@ import {
   Switch,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDrawer } from '@/contexts/DrawerContext';
 import { Colors } from '@/constants/colors';
 import { eventosService, StatusEvento } from '@/services/eventos';
 
@@ -26,6 +28,8 @@ interface Evento {
 }
 
 export default function EventosOrganizadorScreen() {
+  const { user } = useAuth();
+  const { openDrawer } = useDrawer();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,67 +53,81 @@ export default function EventosOrganizadorScreen() {
     }
   }
 
-  function formatDate(dateString: string) {
+  function getFirstName(name: string | undefined): string {
+    if (!name) return '';
+    return name.split(' ')[0] || name;
+  }
+
+  function getDaysUntil(dateString: string): number {
+    const eventDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    eventDate.setHours(0, 0, 0, 0);
+    return Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  function getDateDisplay(dateString: string) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    const day = date.getDate();
+    const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    return { day, month: month.toUpperCase() };
   }
 
   function renderEvento({ item }: { item: Evento }) {
     const isPast = new Date(item.data) < new Date();
     const isCancelado = item.status === 'CANCELADO';
+    const daysUntil = getDaysUntil(item.data);
+    const { day, month } = getDateDisplay(item.data);
 
     return (
       <TouchableOpacity
         style={[
-          styles.eventoCard,
-          isPast && styles.eventoCardPast,
-          isCancelado && styles.eventoCardCancelado,
+          styles.card,
+          isPast && styles.cardPast,
+          isCancelado && styles.cardCancelado,
         ]}
         onPress={() => router.push(`/evento/${item.id}`)}
+        activeOpacity={0.7}
       >
-        <View style={styles.eventoHeader}>
-          <Text style={[styles.eventoNome, (isPast || isCancelado) && styles.textoPassado]}>
-            {item.nome}
+        <View style={[styles.dateBox, isPast && styles.dateBoxPast, isCancelado && styles.dateBoxCancelado]}>
+          <Text style={[styles.dateDay, (isPast || isCancelado) && styles.dateDayMuted]}>{day}</Text>
+          <Text style={[styles.dateMonth, (isPast || isCancelado) && styles.dateMonthMuted]}>{month}</Text>
+        </View>
+
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardTitle, (isPast || isCancelado) && styles.cardTitleMuted]} numberOfLines={1}>
+              {item.nome}
+            </Text>
+            {isCancelado ? (
+              <View style={styles.badgeCancelado}>
+                <Text style={styles.badgeCanceladoText}>Cancelado</Text>
+              </View>
+            ) : isPast ? (
+              <View style={styles.badgeEncerrado}>
+                <Text style={styles.badgeEncerradoText}>Encerrado</Text>
+              </View>
+            ) : (
+              <View style={[styles.badge, item.inscricoesAbertas ? styles.badgeAberto : styles.badgeFechado]}>
+                <Text style={[styles.badgeText, { color: item.inscricoesAbertas ? Colors.success : Colors.error }]}>
+                  {item.inscricoesAbertas ? 'Aberto' : 'Fechado'}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.cardLocation} numberOfLines={1}>
+            {item.local} • {item.cidade}/{item.estado}
           </Text>
-          {isCancelado ? (
-            <View style={styles.statusCancelado}>
-              <Text style={styles.statusCanceladoText}>Cancelado</Text>
-            </View>
-          ) : (
-            <View
-              style={[
-                styles.statusBadge,
-                item.inscricoesAbertas ? styles.statusAberto : styles.statusFechado,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusText,
-                  { color: item.inscricoesAbertas ? Colors.success : Colors.error },
-                ]}
-              >
-                {item.inscricoesAbertas ? 'Aberto' : 'Fechado'}
-              </Text>
-            </View>
+
+          {!isPast && !isCancelado && (
+            <Text style={styles.cardCountdown}>
+              {daysUntil === 0 ? 'Hoje' : daysUntil === 1 ? 'Amanha' : `Em ${daysUntil} dias`}
+            </Text>
           )}
         </View>
-        <View style={styles.eventoInfo}>
-          <Text style={[styles.eventoData, (isPast || isCancelado) && styles.textoPassado]}>
-            {formatDate(item.data)}
-          </Text>
-          <Text style={styles.eventoLocal}>
-            {item.local} - {item.cidade}/{item.estado}
-          </Text>
-        </View>
-        {isPast && !isCancelado && (
-          <View style={styles.pastBadge}>
-            <Text style={styles.pastBadgeText}>Evento encerrado</Text>
-          </View>
-        )}
+
+        <Text style={styles.cardArrow}>›</Text>
       </TouchableOpacity>
     );
   }
@@ -122,7 +140,6 @@ export default function EventosOrganizadorScreen() {
     );
   }
 
-  // Separar eventos futuros e passados
   const hoje = new Date();
   const eventosFuturos = eventos
     .filter(e => new Date(e.data) >= hoje)
@@ -134,19 +151,39 @@ export default function EventosOrganizadorScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Meus Eventos</Text>
-        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/evento/novo')}>
-          <Text style={styles.addButtonText}>+ Novo</Text>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={openDrawer}
+          activeOpacity={0.7}
+        >
+          <View style={styles.hamburgerIcon}>
+            <View style={styles.hamburgerLine} />
+            <View style={styles.hamburgerLine} />
+            <View style={styles.hamburgerLine} />
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.headerContent}>
+          <Text style={styles.greeting}>Ola, {getFirstName(user?.nome)}!</Text>
+          <Text style={styles.subtitle}>Gerencie seus eventos</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.newButton}
+          onPress={() => router.push('/evento/novo')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.newButtonText}>+</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>Mostrar cancelados</Text>
+      <View style={styles.filterBar}>
+        <Text style={styles.filterLabel}>Incluir cancelados</Text>
         <Switch
           value={mostrarCancelados}
           onValueChange={setMostrarCancelados}
-          trackColor={{ false: Colors.border, true: Colors.primary }}
-          thumbColor={Colors.white}
+          trackColor={{ false: Colors.border, true: Colors.primary + '60' }}
+          thumbColor={mostrarCancelados ? Colors.primary : Colors.white}
         />
       </View>
 
@@ -155,6 +192,7 @@ export default function EventosOrganizadorScreen() {
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderEvento}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -162,14 +200,16 @@ export default function EventosOrganizadorScreen() {
               setRefreshing(true);
               loadEventos();
             }}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
           />
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
+          <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📅</Text>
             <Text style={styles.emptyTitle}>Nenhum evento</Text>
             <Text style={styles.emptyText}>
-              Voce ainda nao criou nenhum evento
+              Crie seu primeiro evento e comece a receber inscricoes
             </Text>
             <TouchableOpacity
               style={styles.emptyButton}
@@ -196,147 +236,215 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    backgroundColor: Colors.white,
-    padding: 24,
-    paddingTop: 60,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text,
-  },
-  addButton: {
     backgroundColor: Colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingTop: 56,
+    paddingBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  addButtonText: {
+  menuButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  hamburgerIcon: {
+    width: 24,
+    height: 18,
+    justifyContent: 'space-between',
+  },
+  hamburgerLine: {
+    width: 24,
+    height: 2.5,
+    backgroundColor: Colors.white,
+    borderRadius: 2,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  greeting: {
+    fontSize: 22,
+    fontWeight: 'bold',
     color: Colors.white,
-    fontSize: 14,
-    fontWeight: '600',
   },
-  filterRow: {
+  subtitle: {
+    fontSize: 14,
+    color: Colors.white,
+    opacity: 0.85,
+    marginTop: 2,
+  },
+  newButton: {
+    backgroundColor: Colors.white,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  newButtonText: {
+    color: Colors.primary,
+    fontSize: 28,
+    fontWeight: '400',
+    marginTop: -2,
+  },
+  filterBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   filterLabel: {
     fontSize: 14,
-    color: Colors.text,
+    color: Colors.textSecondary,
   },
   list: {
     padding: 16,
+    paddingBottom: 32,
   },
-  eventoCard: {
+  card: {
     backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
   },
-  eventoCardPast: {
-    opacity: 0.7,
-    backgroundColor: Colors.background,
+  cardPast: {
+    backgroundColor: '#fafafa',
   },
-  eventoCardCancelado: {
-    opacity: 0.6,
-    backgroundColor: '#fff5f5',
+  cardCancelado: {
+    backgroundColor: '#fef5f5',
     borderLeftWidth: 3,
     borderLeftColor: Colors.error,
   },
-  statusCancelado: {
-    backgroundColor: Colors.error + '20',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  dateBox: {
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    width: 52,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  statusCanceladoText: {
-    fontSize: 12,
+  dateBoxPast: {
+    backgroundColor: Colors.textLight,
+  },
+  dateBoxCancelado: {
+    backgroundColor: Colors.error + '30',
+  },
+  dateDay: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.white,
+    lineHeight: 22,
+  },
+  dateDayMuted: {
+    color: Colors.textSecondary,
+  },
+  dateMonth: {
+    fontSize: 10,
     fontWeight: '600',
-    color: Colors.error,
+    color: Colors.white,
+    opacity: 0.9,
   },
-  eventoHeader: {
+  dateMonthMuted: {
+    color: Colors.textSecondary,
+    opacity: 0.8,
+  },
+  cardContent: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
-  eventoNome: {
-    fontSize: 18,
+  cardTitle: {
+    fontSize: 16,
     fontWeight: '600',
     color: Colors.text,
     flex: 1,
-    marginRight: 8,
   },
-  textoPassado: {
+  cardTitleMuted: {
     color: Colors.textSecondary,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  statusAberto: {
-    backgroundColor: Colors.success + '20',
+  badgeAberto: {
+    backgroundColor: Colors.success + '15',
   },
-  statusFechado: {
-    backgroundColor: Colors.error + '20',
+  badgeFechado: {
+    backgroundColor: Colors.error + '15',
   },
-  statusText: {
-    fontSize: 12,
+  badgeText: {
+    fontSize: 11,
     fontWeight: '600',
   },
-  eventoInfo: {
-    gap: 4,
+  badgeCancelado: {
+    backgroundColor: Colors.error + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  eventoData: {
-    fontSize: 14,
+  badgeCanceladoText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.error,
+  },
+  badgeEncerrado: {
+    backgroundColor: Colors.textLight + '30',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  badgeEncerradoText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  cardLocation: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  cardCountdown: {
+    fontSize: 12,
     color: Colors.primary,
     fontWeight: '500',
   },
-  eventoLocal: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+  cardArrow: {
+    fontSize: 24,
+    color: Colors.textLight,
+    marginLeft: 8,
   },
-  pastBadge: {
-    backgroundColor: Colors.textLight + '30',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  pastBadgeText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  emptyContainer: {
+  emptyState: {
     backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 40,
     alignItems: 'center',
+    marginTop: 20,
   },
   emptyIcon: {
-    fontSize: 48,
+    fontSize: 56,
     marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: Colors.text,
     marginBottom: 8,
@@ -345,17 +453,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    lineHeight: 20,
   },
   emptyButton: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 10,
   },
   emptyButtonText: {
     color: Colors.white,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
 });
