@@ -12,6 +12,8 @@ import {
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import { eventosService, Evento, Categoria, StatusEvento } from '@/services/eventos';
+import { parseLocalDate } from '@/utils/dateHelpers';
+import { formatCurrency } from '@/utils/formatters';
 
 export default function DetalhesEventoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -47,18 +49,11 @@ export default function DetalhesEventoScreen() {
   );
 
   function formatDate(dateString: string) {
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
     return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
-    });
-  }
-
-  function formatCurrency(value: number) {
-    return value.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
     });
   }
 

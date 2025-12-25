@@ -13,6 +13,8 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import { eventosService, Inscricao } from '@/services/eventos';
+import { parseLocalDate, formatDateDisplay } from '@/utils/dateHelpers';
+import { getStatusColor, getStatusLabel } from '@/utils/statusHelpers';
 
 export default function InscricoesEventoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,37 +40,6 @@ export default function InscricoesEventoScreen() {
   useEffect(() => {
     loadInscricoes();
   }, [loadInscricoes]);
-
-  function getStatusColor(status: string) {
-    switch (status) {
-      case 'PAGO':
-        return Colors.success;
-      case 'PENDENTE':
-        return Colors.warning;
-      case 'CANCELADO':
-        return Colors.error;
-      default:
-        return Colors.textSecondary;
-    }
-  }
-
-  function getStatusLabel(status: string) {
-    switch (status) {
-      case 'PAGO':
-        return 'Pago';
-      case 'PENDENTE':
-        return 'Pendente';
-      case 'CANCELADO':
-        return 'Cancelado';
-      default:
-        return status;
-    }
-  }
-
-  function formatDate(dateString: string) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
-  }
 
   function openModal(inscricao: Inscricao) {
     setSelectedInscricao(inscricao);
@@ -117,7 +88,7 @@ export default function InscricoesEventoScreen() {
         <View style={styles.inscricaoInfo}>
           <Text style={styles.infoText}>Categoria: {item.categoriaNome}</Text>
           <Text style={styles.infoText}>CPF: {item.atletaCpf}</Text>
-          <Text style={styles.infoText}>Data: {formatDate(item.dataInscricao)}</Text>
+          <Text style={styles.infoText}>Data: {formatDateDisplay(item.dataInscricao)}</Text>
           {item.numeroInscricao && (
             <Text style={styles.numeroInscricao}>#{item.numeroInscricao}</Text>
           )}

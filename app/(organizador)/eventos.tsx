@@ -15,6 +15,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { Colors } from '@/constants/colors';
 import { eventosService, StatusEvento } from '@/services/eventos';
+import { parseLocalDate, getDaysUntil, getDateParts, getToday, getCountdownText } from '@/utils/dateHelpers';
+import { getFirstName } from '@/utils/formatters';
 
 interface Evento {
   id: number;
@@ -53,31 +55,11 @@ export default function EventosOrganizadorScreen() {
     }
   }
 
-  function getFirstName(name: string | undefined): string {
-    if (!name) return '';
-    return name.split(' ')[0] || name;
-  }
-
-  function getDaysUntil(dateString: string): number {
-    const eventDate = new Date(dateString);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    eventDate.setHours(0, 0, 0, 0);
-    return Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  }
-
-  function getDateDisplay(dateString: string) {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
-    return { day, month: month.toUpperCase() };
-  }
-
   function renderEvento({ item }: { item: Evento }) {
-    const isPast = new Date(item.data) < new Date();
+    const eventDate = parseLocalDate(item.data);
+    const isPast = eventDate < getToday();
     const isCancelado = item.status === 'CANCELADO';
-    const daysUntil = getDaysUntil(item.data);
-    const { day, month } = getDateDisplay(item.data);
+    const { day, month } = getDateParts(item.data);
 
     return (
       <TouchableOpacity
@@ -122,7 +104,7 @@ export default function EventosOrganizadorScreen() {
 
           {!isPast && !isCancelado && (
             <Text style={styles.cardCountdown}>
-              {daysUntil === 0 ? 'Hoje' : daysUntil === 1 ? 'Amanha' : `Em ${daysUntil} dias`}
+              {getCountdownText(item.data)}
             </Text>
           )}
         </View>
@@ -140,13 +122,13 @@ export default function EventosOrganizadorScreen() {
     );
   }
 
-  const hoje = new Date();
+  const hoje = getToday();
   const eventosFuturos = eventos
-    .filter(e => new Date(e.data) >= hoje)
-    .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+    .filter(e => parseLocalDate(e.data) >= hoje)
+    .sort((a, b) => parseLocalDate(a.data).getTime() - parseLocalDate(b.data).getTime());
   const eventosPassados = eventos
-    .filter(e => new Date(e.data) < hoje)
-    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    .filter(e => parseLocalDate(e.data) < hoje)
+    .sort((a, b) => parseLocalDate(b.data).getTime() - parseLocalDate(a.data).getTime());
 
   return (
     <View style={styles.container}>

@@ -13,6 +13,8 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import api from '@/services/api';
 import { ENDPOINTS } from '@/constants/api';
+import { parseLocalDate } from '@/utils/dateHelpers';
+import { formatCurrency } from '@/utils/formatters';
 
 interface Evento {
   id: number;
@@ -65,19 +67,12 @@ export default function InscricaoEventoScreen() {
   }, [loadData]);
 
   function formatDate(dateString: string) {
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
     return date.toLocaleDateString('pt-BR', {
       weekday: 'long',
       day: '2-digit',
       month: 'long',
       year: 'numeric',
-    });
-  }
-
-  function formatCurrency(value: number) {
-    return value.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
     });
   }
 

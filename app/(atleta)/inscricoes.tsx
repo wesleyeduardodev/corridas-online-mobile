@@ -13,6 +13,9 @@ import {
 import { useFocusEffect, router } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import { inscricoesService, InscricaoAtleta } from '@/services/inscricoes';
+import { formatDateDisplay, parseLocalDate, getToday } from '@/utils/dateHelpers';
+import { getStatusColor, getStatusLabel } from '@/utils/statusHelpers';
+import { formatCurrency } from '@/utils/formatters';
 
 export default function InscricoesAtletaScreen() {
   const [inscricoes, setInscricoes] = useState<InscricaoAtleta[]>([]);
@@ -39,51 +42,6 @@ export default function InscricoesAtletaScreen() {
       loadInscricoes();
     }, [loadInscricoes])
   );
-
-  function getStatusColor(status: string) {
-    switch (status) {
-      case 'PAGO':
-        return Colors.success;
-      case 'PENDENTE':
-        return Colors.warning;
-      case 'CANCELADO':
-        return Colors.error;
-      default:
-        return Colors.textSecondary;
-    }
-  }
-
-  function getStatusLabel(status: string) {
-    switch (status) {
-      case 'PAGO':
-        return 'Confirmado';
-      case 'PENDENTE':
-        return 'Aguardando Pagamento';
-      case 'CANCELADO':
-        return 'Cancelado';
-      default:
-        return status;
-    }
-  }
-
-  function formatDate(dateString: string) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  }
-
-  function formatCurrency(value?: number) {
-    if (value === undefined || value === null) {
-      return 'R$ 0,00';
-    }
-    return value.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
-  }
 
   function openModal(inscricao: InscricaoAtleta) {
     setSelectedInscricao(inscricao);
@@ -121,7 +79,7 @@ export default function InscricoesAtletaScreen() {
   }
 
   function renderInscricao({ item }: { item: InscricaoAtleta }) {
-    const isPast = new Date(item.eventoData) < new Date();
+    const isPast = parseLocalDate(item.eventoData) < getToday();
 
     return (
       <TouchableOpacity
@@ -152,7 +110,7 @@ export default function InscricoesAtletaScreen() {
         <View style={styles.inscricaoBody}>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Data</Text>
-            <Text style={styles.infoValue}>{formatDate(item.eventoData)}</Text>
+            <Text style={styles.infoValue}>{formatDateDisplay(item.eventoData)}</Text>
           </View>
 
           <View style={styles.infoRow}>
@@ -177,7 +135,7 @@ export default function InscricoesAtletaScreen() {
 
         <View style={styles.inscricaoFooter}>
           <Text style={styles.inscricaoData}>
-            Inscrito em {formatDate(item.dataInscricao)}
+            Inscrito em {formatDateDisplay(item.dataInscricao)}
           </Text>
           <Text style={styles.valor}>{formatCurrency(item.valor)}</Text>
         </View>
@@ -268,7 +226,7 @@ export default function InscricoesAtletaScreen() {
                 <View style={styles.modalInfoSection}>
                   <View style={styles.modalInfoRow}>
                     <Text style={styles.modalInfoLabel}>Data do Evento</Text>
-                    <Text style={styles.modalInfoValue}>{formatDate(selectedInscricao.eventoData)}</Text>
+                    <Text style={styles.modalInfoValue}>{formatDateDisplay(selectedInscricao.eventoData)}</Text>
                   </View>
 
                   <View style={styles.modalInfoRow}>
@@ -306,7 +264,7 @@ export default function InscricoesAtletaScreen() {
 
                   <View style={styles.modalInfoRow}>
                     <Text style={styles.modalInfoLabel}>Data da Inscricao</Text>
-                    <Text style={styles.modalInfoValue}>{formatDate(selectedInscricao.dataInscricao)}</Text>
+                    <Text style={styles.modalInfoValue}>{formatDateDisplay(selectedInscricao.dataInscricao)}</Text>
                   </View>
                 </View>
 

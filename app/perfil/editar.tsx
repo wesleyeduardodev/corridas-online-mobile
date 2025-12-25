@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/colors';
 import { perfilService } from '@/services/perfil';
+import { parseLocalDate } from '@/utils/dateHelpers';
 
 export default function EditarPerfilScreen() {
   const { user } = useAuth();
@@ -58,7 +59,7 @@ export default function EditarPerfilScreen() {
   }
 
   function formatDateFromISO(isoDate: string): string {
-    const date = new Date(isoDate);
+    const date = parseLocalDate(isoDate);
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();

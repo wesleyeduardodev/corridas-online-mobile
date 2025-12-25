@@ -19,6 +19,7 @@ import { Colors } from '@/constants/colors';
 import { eventosService, CriarEventoRequest } from '@/services/eventos';
 import LocalidadeSelector from '@/components/LocalidadeSelector';
 import BannerPlaceholder from '@/components/BannerPlaceholder';
+import { parseLocalDate } from '@/utils/dateHelpers';
 
 export default function EditarEventoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -74,7 +75,7 @@ export default function EditarEventoScreen() {
   }
 
   function formatDateFromISO(isoDate: string): string {
-    const date = new Date(isoDate);
+    const date = parseLocalDate(isoDate);
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();

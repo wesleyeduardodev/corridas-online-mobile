@@ -13,6 +13,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import api from '@/services/api';
 import { ENDPOINTS } from '@/constants/api';
+import { parseLocalDate, getDateParts, getCountdownText, getToday, getDaysUntil } from '@/utils/dateHelpers';
 
 interface Evento {
   id: number;
@@ -47,26 +48,10 @@ export default function EventosAtletaScreen() {
     }
   }
 
-  function formatDate(dateString: string) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  }
-
-  function getDaysUntil(dateString: string) {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const data = new Date(dateString);
-    data.setHours(0, 0, 0, 0);
-    const diff = Math.ceil((data.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
-  }
-
   function renderEvento({ item }: { item: Evento }) {
+    const { day, month } = getDateParts(item.data);
     const daysUntil = getDaysUntil(item.data);
+    const isToday = daysUntil === 0;
 
     return (
       <TouchableOpacity
@@ -74,12 +59,8 @@ export default function EventosAtletaScreen() {
         onPress={() => router.push(`/evento/${item.id}/inscricao`)}
       >
         <View style={styles.eventoDateContainer}>
-          <Text style={styles.eventoDay}>
-            {new Date(item.data).getDate()}
-          </Text>
-          <Text style={styles.eventoMonth}>
-            {new Date(item.data).toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase()}
-          </Text>
+          <Text style={styles.eventoDay}>{day}</Text>
+          <Text style={styles.eventoMonth}>{month}</Text>
         </View>
 
         <View style={styles.eventoContent}>
@@ -88,13 +69,9 @@ export default function EventosAtletaScreen() {
             {item.cidade}/{item.estado}
           </Text>
           <View style={styles.eventoFooter}>
-            {daysUntil === 0 ? (
-              <Text style={styles.eventoDaysToday}>Hoje!</Text>
-            ) : daysUntil === 1 ? (
-              <Text style={styles.eventoDays}>Amanha</Text>
-            ) : (
-              <Text style={styles.eventoDays}>Em {daysUntil} dias</Text>
-            )}
+            <Text style={isToday ? styles.eventoDaysToday : styles.eventoDays}>
+              {getCountdownText(item.data)}
+            </Text>
           </View>
         </View>
 
@@ -121,16 +98,13 @@ export default function EventosAtletaScreen() {
     );
   }
 
-  // Filtrar apenas eventos futuros com inscricoes abertas primeiro
-  const hoje = new Date();
+  const hoje = getToday();
   const eventosOrdenados = eventos
-    .filter(e => new Date(e.data) >= hoje)
+    .filter(e => parseLocalDate(e.data) >= hoje)
     .sort((a, b) => {
-      // Inscricoes abertas primeiro
       if (a.inscricoesAbertas && !b.inscricoesAbertas) return -1;
       if (!a.inscricoesAbertas && b.inscricoesAbertas) return 1;
-      // Depois por data
-      return new Date(a.data).getTime() - new Date(b.data).getTime();
+      return parseLocalDate(a.data).getTime() - parseLocalDate(b.data).getTime();
     });
 
   return (

@@ -12,6 +12,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/colors';
 import { inscricoesService, InscricaoAtleta } from '@/services/inscricoes';
+import { parseLocalDate, getDateParts, getCountdownText, getToday } from '@/utils/dateHelpers';
+import { getStatusColor, getStatusLabel } from '@/utils/statusHelpers';
 
 export default function AtletaDashboard() {
   const { user } = useAuth();
@@ -37,53 +39,10 @@ export default function AtletaDashboard() {
     }
   }
 
-  function formatDate(dateString: string) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-    });
-  }
-
-  function getDaysUntil(dateString: string) {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const data = new Date(dateString);
-    data.setHours(0, 0, 0, 0);
-    const diff = Math.ceil((data.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
-  }
-
-  function getStatusColor(status: string) {
-    switch (status) {
-      case 'PAGO':
-        return Colors.success;
-      case 'PENDENTE':
-        return Colors.warning;
-      case 'CANCELADO':
-        return Colors.error;
-      default:
-        return Colors.textSecondary;
-    }
-  }
-
-  function getStatusLabel(status: string) {
-    switch (status) {
-      case 'PAGO':
-        return 'Confirmado';
-      case 'PENDENTE':
-        return 'Pendente';
-      case 'CANCELADO':
-        return 'Cancelado';
-      default:
-        return status;
-    }
-  }
-
-  // Filtrar inscricoes ativas e futuras
+  const hoje = getToday();
   const inscricoesAtivas = inscricoes
-    .filter(i => i.status !== 'CANCELADO' && new Date(i.eventoData) >= new Date())
-    .sort((a, b) => new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime());
+    .filter(i => i.status !== 'CANCELADO' && parseLocalDate(i.eventoData) >= hoje)
+    .sort((a, b) => parseLocalDate(a.eventoData).getTime() - parseLocalDate(b.eventoData).getTime());
 
   const proximaInscricao = inscricoesAtivas[0];
 
@@ -149,10 +108,10 @@ export default function AtletaDashboard() {
               <View style={styles.nextRaceHeader}>
                 <View style={styles.nextRaceDate}>
                   <Text style={styles.nextRaceDay}>
-                    {new Date(proximaInscricao.eventoData).getDate()}
+                    {getDateParts(proximaInscricao.eventoData).day}
                   </Text>
                   <Text style={styles.nextRaceMonth}>
-                    {new Date(proximaInscricao.eventoData).toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase()}
+                    {getDateParts(proximaInscricao.eventoData).month}
                   </Text>
                 </View>
                 <View style={styles.nextRaceInfo}>
