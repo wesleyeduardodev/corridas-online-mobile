@@ -24,24 +24,20 @@ export interface RealizarInscricaoRequest {
 }
 
 export const inscricoesService = {
-  // Listar inscrições do atleta logado
   minhasInscricoes: async (): Promise<InscricaoAtleta[]> => {
     const response = await api.get(ENDPOINTS.INSCRICOES.ATLETA);
     return response.data;
   },
 
-  // Realizar inscrição em um evento
   inscrever: async (eventoId: number, data: RealizarInscricaoRequest): Promise<InscricaoAtleta> => {
     const response = await api.post(ENDPOINTS.INSCRICOES.INSCREVER(eventoId), data);
     return response.data;
   },
 
-  // Cancelar inscrição
   cancelar: async (inscricaoId: number): Promise<void> => {
     await api.delete(`${ENDPOINTS.INSCRICOES.ATLETA}/${inscricaoId}`);
   },
 
-  // Buscar detalhes de uma inscrição
   buscarPorId: async (inscricaoId: number): Promise<InscricaoAtleta> => {
     const response = await api.get(`${ENDPOINTS.INSCRICOES.ATLETA}/${inscricaoId}`);
     return response.data;
